@@ -1,0 +1,21 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    @apply bg-[#0B0B0F] text-gray-200 font-sans;
+    margin: 0;
+    min-height: 100vh;
+  }
+
+  /* স্ক্রলবার কাস্টম */
+  ::-webkit-scrollbar {
+    width: 5px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #0B0B0F;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #00F0FF;
+    border-radius: 10px;
+  }
+}
