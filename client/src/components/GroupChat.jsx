@@ -11,8 +11,8 @@ const GroupChat = ({ group, onBack }) => {
   const [newMessage, setNewMessage] = useState('');
   const messagesEndRef = useRef(null);
 
-  // মেসেজ লোড
   useEffect(() => {
+    if (!group) return;
     loadMessages();
     socket?.emit('joinGroup', group._id);
 
@@ -21,15 +21,17 @@ const GroupChat = ({ group, onBack }) => {
     };
   }, [group]);
 
-  // সকেট ইভেন্ট
   useEffect(() => {
     if (!socket) return;
-    socket.on('receiveGroupMessage', (msg) => {
-      if (msg.group === group._id) {
+
+    const handler = (msg) => {
+      if (msg.group === group?._id || msg.group?._id === group?._id) {
         setMessages((prev) => [...prev, msg]);
       }
-    });
-    return () => socket.off('receiveGroupMessage');
+    };
+
+    socket.on('receiveGroupMessage', handler);
+    return () => socket.off('receiveGroupMessage', handler);
   }, [socket, group]);
 
   useEffect(() => {
@@ -62,18 +64,26 @@ const GroupChat = ({ group, onBack }) => {
     }
   };
 
+  if (!group) {
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <p className="text-gray-500">গ্রুপ সিলেক্ট করো</p>
+      </div>
+    );
+  }
+
   return (
     <div className="flex-1 flex flex-col h-full">
       {/* হেডার */}
-      <div className="flex items-center gap-3 p-3 border-b border-[#00F0FF]/10 bg-[#0F0F15]">
+      <div className="flex items-center gap-3 p-3 border-b border-[#FF007F]/10 bg-[#0F0F15]">
         <button onClick={onBack} className="md:hidden text-gray-400 hover:text-white text-xl">←</button>
         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#FF007F] to-[#FF007F]/50 
                         flex items-center justify-center text-white font-bold text-sm">
           👥
         </div>
-        <div>
-          <p className="text-gray-200 font-medium">{group.name}</p>
-          <p className="text-xs text-gray-500">{group.members?.length} জন মেম্বার</p>
+        <div className="flex-1 min-w-0">
+          <p className="text-gray-200 font-medium truncate">{group.name}</p>
+          <p className="text-xs text-gray-500">{group.members?.length || 0} জন মেম্বার</p>
         </div>
       </div>
 
@@ -83,8 +93,7 @@ const GroupChat = ({ group, onBack }) => {
           const isMine = msg.sender?._id === user?._id;
           return (
             <div key={msg._id || i} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
-              <div className={`
-                max-w-[80%] px-4 py-2.5 rounded-2xl text-sm
+              <div className={`max-w-[80%] px-4 py-2.5 rounded-2xl text-sm
                 ${isMine
                   ? 'bg-gradient-to-r from-[#00F0FF]/20 to-[#00F0FF]/10 border border-[#00F0FF]/30'
                   : 'bg-[#1A1A20] border border-[#FF007F]/20'
@@ -104,7 +113,7 @@ const GroupChat = ({ group, onBack }) => {
       </div>
 
       {/* ইনপুট */}
-      <form onSubmit={handleSend} className="p-3 border-t border-[#00F0FF]/10 bg-[#0F0F15]">
+      <form onSubmit={handleSend} className="p-3 border-t border-[#FF007F]/10 bg-[#0F0F15]">
         <div className="flex gap-2">
           <input
             type="text"

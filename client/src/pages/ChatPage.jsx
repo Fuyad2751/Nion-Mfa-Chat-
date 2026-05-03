@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 import Sidebar from '../components/Sidebar';
 import ChatWindow from '../components/ChatWindow';
+import GroupChat from '../components/GroupChat';
 import FriendProfile from '../components/FriendProfile';
 import ProfilePage from './ProfilePage';
 
@@ -10,13 +11,30 @@ const ChatPage = () => {
   const { user, logout } = useAuth();
   const { onlineUsers } = useSocket();
   const [selectedFriend, setSelectedFriend] = useState(null);
+  const [selectedGroup, setSelectedGroup] = useState(null);
   const [showSidebar, setShowSidebar] = useState(true);
   const [showProfile, setShowProfile] = useState(false);
   const [showProfilePage, setShowProfilePage] = useState(false);
 
+  const handleSelectFriend = (friend) => {
+    setSelectedGroup(null);
+    setSelectedFriend(friend);
+    setShowSidebar(false);
+  };
+
+  const handleSelectGroup = (group) => {
+    setSelectedFriend(null);
+    setSelectedGroup(group);
+    setShowSidebar(false);
+  };
+
+  const handleBack = () => {
+    setShowSidebar(true);
+  };
+
   return (
     <div className="h-screen bg-[#0B0B0F] flex overflow-hidden">
-      {/* সাইডবার - মোবাইলে টগল */}
+      {/* সাইডবার */}
       <div className={`
         ${showSidebar ? 'translate-x-0' : '-translate-x-full'}
         md:translate-x-0 md:relative absolute z-30 h-full w-full md:w-80 lg:w-96
@@ -26,36 +44,33 @@ const ChatPage = () => {
           user={user}
           onlineUsers={onlineUsers}
           selectedFriend={selectedFriend}
-          onSelectFriend={(friend) => {
-            setSelectedFriend(friend);
-            setShowSidebar(false);
-          }}
+          selectedGroup={selectedGroup}
+          onSelectFriend={handleSelectFriend}
+          onSelectGroup={handleSelectGroup}
           onLogout={logout}
           onProfile={() => setShowProfilePage(true)}
         />
       </div>
 
-      {/* মোবাইল ব্যাক বাটন ওভারলে */}
-      {!showSidebar && selectedFriend && (
-        <div
-          className="md:hidden fixed inset-0 bg-black/50 z-20"
-          onClick={() => setShowSidebar(true)}
-        />
+      {/* মোবাইল ব্যাক ওভারলে */}
+      {!showSidebar && (selectedFriend || selectedGroup) && (
+        <div className="md:hidden fixed inset-0 bg-black/50 z-20" onClick={handleBack} />
       )}
 
       {/* চ্যাট উইন্ডো */}
-      <div className={`
-        flex-1 flex flex-col
-        ${showSidebar ? 'hidden md:flex' : 'flex'}
-      `}>
-        <ChatWindow
-          selectedFriend={selectedFriend}
-          onBack={() => setShowSidebar(true)}
-          onShowProfile={() => setShowProfile(true)}
-        />
+      <div className={`flex-1 flex flex-col ${showSidebar ? 'hidden md:flex' : 'flex'}`}>
+        {selectedGroup ? (
+          <GroupChat group={selectedGroup} onBack={handleBack} />
+        ) : (
+          <ChatWindow
+            selectedFriend={selectedFriend}
+            onBack={handleBack}
+            onShowProfile={() => setShowProfile(true)}
+          />
+        )}
       </div>
 
-      {/* প্রোফাইল সাইডবার (ডেস্কটপে) */}
+      {/* ফ্রেন্ড প্রোফাইল (ডেস্কটপ) */}
       {showProfile && selectedFriend && (
         <div className="hidden md:block w-80 border-l border-[#00F0FF]/20">
           <FriendProfile
@@ -66,7 +81,7 @@ const ChatPage = () => {
         </div>
       )}
 
-      {/* প্রোফাইল পেজ (নিজের প্রোফাইল) */}
+      {/* নিজের প্রোফাইল পেজ */}
       {showProfilePage && (
         <div className="fixed inset-0 z-50 bg-[#0B0B0F]">
           <ProfilePage onBack={() => setShowProfilePage(false)} />

@@ -92,13 +92,106 @@ const PendingRequests = ({ onUpdate }) => {
   );
 };
 
+// গ্রুপ তৈরি মোডাল
+const CreateGroupModal = ({ friends, onClose, onCreated }) => {
+  const [groupName, setGroupName] = useState('');
+  const [selectedMembers, setSelectedMembers] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  const toggleMember = (userId) => {
+    setSelectedMembers((prev) =>
+      prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]
+    );
+  };
+
+  const handleCreate = async () => {
+    if (!groupName.trim()) return toast.error('গ্রুপের নাম দাও');
+    if (selectedMembers.length === 0) return toast.error('কমপক্ষে একজন মেম্বার সিলেক্ট করো');
+
+    try {
+      setLoading(true);
+      await API.post('/groups', { name: groupName.trim(), members: selectedMembers });
+      toast.success('গ্রুপ তৈরি হয়েছে!');
+      onCreated();
+      onClose();
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'গ্রুপ তৈরি ব্যর্থ');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+      <div className="bg-[#0F0F15] border border-[#00F0FF]/20 rounded-2xl w-full max-w-md p-5 max-h-[80vh] overflow-y-auto">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-bold text-[#00F0FF]"
+            style={{ textShadow: '0 0 8px #00F0FF' }}>
+            নতুন গ্রুপ তৈরি
+          </h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-white text-xl">✕</button>
+        </div>
+
+        <input
+          type="text"
+          placeholder="গ্রুপের নাম"
+          value={groupName}
+          onChange={(e) => setGroupName(e.target.value)}
+          className="w-full px-4 py-3 bg-[#1A1A20] border border-[#00F0FF]/20 rounded-xl
+                     text-gray-200 placeholder-gray-500 outline-none text-sm mb-4
+                     focus:border-[#00F0FF] focus:shadow-[0_0_10px_#00F0FF] transition-all"
+          autoFocus
+        />
+
+        <p className="text-gray-400 text-xs mb-2">মেম্বার সিলেক্ট করো:</p>
+        <div className="space-y-1 max-h-48 overflow-y-auto mb-4">
+          {friends.length === 0 ? (
+            <p className="text-gray-600 text-xs text-center py-4">কোনো বন্ধু নেই</p>
+          ) : (
+            friends.map((friend) => (
+              <label
+                key={friend._id}
+                className="flex items-center gap-3 p-2.5 hover:bg-[#00F0FF]/5 rounded-lg cursor-pointer"
+              >
+                <input
+                  type="checkbox"
+                  checked={selectedMembers.includes(friend._id)}
+                  onChange={() => toggleMember(friend._id)}
+                  className="accent-[#00F0FF] w-4 h-4"
+                />
+                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#00F0FF]/40 to-[#FF007F]/40 
+                                flex items-center justify-center text-white text-xs font-bold">
+                  {friend.name?.charAt(0)}
+                </div>
+                <span className="text-gray-300 text-sm">{friend.name}</span>
+              </label>
+            ))
+          )}
+        </div>
+
+        <button
+          onClick={handleCreate}
+          disabled={loading || !groupName.trim() || selectedMembers.length === 0}
+          className="w-full py-3 bg-gradient-to-r from-[#00F0FF] to-[#FF007F] rounded-xl text-black font-bold
+                     hover:shadow-[0_0_20px_#00F0FF,0_0_40px_#FF007F] transition-all
+                     disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {loading ? 'তৈরি হচ্ছে...' : 'গ্রুপ তৈরি করো'}
+        </button>
+      </div>
+    </div>
+  );
+};
+
 // প্রধান Sidebar কম্পোনেন্ট
-const Sidebar = ({ user, onlineUsers, selectedFriend, onSelectFriend, onLogout, onProfile }) => {
+const Sidebar = ({ user, onlineUsers, selectedFriend, selectedGroup, onSelectFriend, onSelectGroup, onLogout, onProfile }) => {
   const [friends, setFriends] = useState([]);
+  const [groups, setGroups] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [showSearch, setShowSearch] = useState(false);
-  const [pendingCount, setPendingCount] = useState(0);
+  const [showGroupModal, setShowGroupModal] = useState(false);
+  const [activeTab, setActiveTab] = useState('friends'); // 'friends' or 'groups'
 
   const loadFriends = async () => {
     try {
@@ -109,10 +202,10 @@ const Sidebar = ({ user, onlineUsers, selectedFriend, onSelectFriend, onLogout, 
     }
   };
 
-  const loadPendingCount = async () => {
+  const loadGroups = async () => {
     try {
-      const { data } = await API.get('/friends/requests');
-      setPendingCount(data.length);
+      const { data } = await API.get('/groups');
+      setGroups(data);
     } catch (error) {
       console.error(error);
     }
@@ -120,7 +213,7 @@ const Sidebar = ({ user, onlineUsers, selectedFriend, onSelectFriend, onLogout, 
 
   useEffect(() => {
     loadFriends();
-    loadPendingCount();
+    loadGroups();
   }, []);
 
   const handleSearch = async (query) => {
@@ -203,6 +296,30 @@ const Sidebar = ({ user, onlineUsers, selectedFriend, onSelectFriend, onLogout, 
         </div>
       </div>
 
+      {/* ট্যাব: বন্ধু / গ্রুপ */}
+      <div className="flex border-b border-[#00F0FF]/10">
+        <button
+          onClick={() => setActiveTab('friends')}
+          className={`flex-1 py-2.5 text-sm font-medium transition-all
+            ${activeTab === 'friends'
+              ? 'text-[#00F0FF] border-b-2 border-[#00F0FF]'
+              : 'text-gray-500 hover:text-gray-300'
+            }`}
+        >
+          👥 বন্ধুরা
+        </button>
+        <button
+          onClick={() => setActiveTab('groups')}
+          className={`flex-1 py-2.5 text-sm font-medium transition-all
+            ${activeTab === 'groups'
+              ? 'text-[#FF007F] border-b-2 border-[#FF007F]'
+              : 'text-gray-500 hover:text-gray-300'
+            }`}
+        >
+          👥 গ্রুপ
+        </button>
+      </div>
+
       {/* সার্চ বার */}
       {showSearch && (
         <div className="p-3 border-b border-[#00F0FF]/10">
@@ -217,7 +334,6 @@ const Sidebar = ({ user, onlineUsers, selectedFriend, onSelectFriend, onLogout, 
                        transition-all duration-300"
             autoFocus
           />
-          {/* সার্চ রেজাল্ট */}
           {searchResults.length > 0 && (
             <div className="mt-2 space-y-1 max-h-48 overflow-y-auto">
               {searchResults.map((u) => (
@@ -250,60 +366,116 @@ const Sidebar = ({ user, onlineUsers, selectedFriend, onSelectFriend, onLogout, 
         </div>
       )}
 
-      {/* পেন্ডিং রিকোয়েস্ট */}
-      <PendingRequests
-        onUpdate={() => {
-          loadFriends();
-          loadPendingCount();
-        }}
-      />
+      {/* পেন্ডিং রিকোয়েস্ট (শুধু ফ্রেন্ড ট্যাবে) */}
+      {activeTab === 'friends' && (
+        <PendingRequests
+          onUpdate={() => {
+            loadFriends();
+          }}
+        />
+      )}
 
-      {/* ফ্রেন্ড লিস্ট */}
+      {/* কন্টেন্ট: ফ্রেন্ড বা গ্রুপ লিস্ট */}
       <div className="flex-1 overflow-y-auto p-2">
-        <p className="text-gray-500 text-xs uppercase tracking-wider px-3 py-2">বন্ধুরা</p>
-        {friends.length === 0 ? (
-          <p className="text-gray-600 text-sm text-center py-8">এখনো কোনো বন্ধু নেই</p>
+        {activeTab === 'friends' ? (
+          <>
+            <p className="text-gray-500 text-xs uppercase tracking-wider px-3 py-2">বন্ধুরা</p>
+            {friends.length === 0 ? (
+              <p className="text-gray-600 text-sm text-center py-8">এখনো কোনো বন্ধু নেই</p>
+            ) : (
+              friends.map((friend) => {
+                const isOnline = onlineUsers.includes(friend._id);
+                const isSelected = selectedFriend?._id === friend._id;
+                return (
+                  <button
+                    key={friend._id}
+                    onClick={() => { onSelectFriend(friend); }}
+                    className={`w-full flex items-center gap-3 p-3 rounded-xl mb-1 transition-all duration-200
+                      ${isSelected
+                        ? 'bg-[#00F0FF]/10 border border-[#00F0FF]/30'
+                        : 'hover:bg-[#1A1A20] border border-transparent'
+                      }`}
+                  >
+                    <div className="relative">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#00F0FF]/40 to-[#FF007F]/40 
+                                      flex items-center justify-center text-white font-bold text-sm overflow-hidden">
+                        {friend.avatar ? (
+                          <img src={friend.avatar} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          friend.name?.charAt(0)
+                        )}
+                      </div>
+                      {isOnline && (
+                        <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-400 rounded-full 
+                                         border-2 border-[#0F0F15]"
+                          style={{ boxShadow: '0 0 6px #4ade80, 0 0 12px #4ade80' }}
+                        ></span>
+                      )}
+                    </div>
+                    <div className="flex-1 text-left min-w-0">
+                      <p className="text-gray-200 text-sm font-medium truncate">{friend.name}</p>
+                      <p className={`text-xs ${isOnline ? 'text-green-400' : 'text-gray-500'}`}>
+                        {isOnline ? 'অনলাইন' : 'অফলাইন'}
+                      </p>
+                    </div>
+                  </button>
+                );
+              })
+            )}
+          </>
         ) : (
-          friends.map((friend) => {
-            const isOnline = onlineUsers.includes(friend._id);
-            const isSelected = selectedFriend?._id === friend._id;
-            return (
+          <>
+            <div className="flex items-center justify-between px-3 py-2">
+              <p className="text-gray-500 text-xs uppercase tracking-wider">গ্রুপ</p>
               <button
-                key={friend._id}
-                onClick={() => onSelectFriend(friend)}
-                className={`w-full flex items-center gap-3 p-3 rounded-xl mb-1 transition-all duration-200
-                  ${isSelected
-                    ? 'bg-[#00F0FF]/10 border border-[#00F0FF]/30'
-                    : 'hover:bg-[#1A1A20] border border-transparent'
-                  }`}
+                onClick={() => setShowGroupModal(true)}
+                className="text-xs text-[#FF007F] border border-[#FF007F]/30 px-2 py-1 rounded-lg
+                           hover:bg-[#FF007F]/10 transition-all"
               >
-                <div className="relative">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#00F0FF]/40 to-[#FF007F]/40 
-                                  flex items-center justify-center text-white font-bold text-sm overflow-hidden">
-                    {friend.avatar ? (
-                      <img src={friend.avatar} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      friend.name?.charAt(0)
-                    )}
-                  </div>
-                  {isOnline && (
-                    <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-400 rounded-full 
-                                     border-2 border-[#0F0F15]"
-                      style={{ boxShadow: '0 0 6px #4ade80, 0 0 12px #4ade80' }}
-                    ></span>
-                  )}
-                </div>
-                <div className="flex-1 text-left min-w-0">
-                  <p className="text-gray-200 text-sm font-medium truncate">{friend.name}</p>
-                  <p className={`text-xs ${isOnline ? 'text-green-400' : 'text-gray-500'}`}>
-                    {isOnline ? 'অনলাইন' : 'অফলাইন'}
-                  </p>
-                </div>
+                + নতুন
               </button>
-            );
-          })
+            </div>
+            {groups.length === 0 ? (
+              <p className="text-gray-600 text-sm text-center py-8">কোনো গ্রুপ নেই</p>
+            ) : (
+              groups.map((group) => {
+                const isSelected = selectedGroup?._id === group._id;
+                return (
+                  <button
+                    key={group._id}
+                    onClick={() => onSelectGroup?.(group)}
+                    className={`w-full flex items-center gap-3 p-3 rounded-xl mb-1 transition-all duration-200
+                      ${isSelected
+                        ? 'bg-[#FF007F]/10 border border-[#FF007F]/30'
+                        : 'hover:bg-[#1A1A20] border border-transparent'
+                      }`}
+                  >
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#FF007F]/40 to-[#FF007F]/20 
+                                    flex items-center justify-center text-white font-bold text-sm">
+                      👥
+                    </div>
+                    <div className="flex-1 text-left min-w-0">
+                      <p className="text-gray-200 text-sm font-medium truncate">{group.name}</p>
+                      <p className="text-xs text-gray-500">{group.members?.length || 0} জন মেম্বার</p>
+                    </div>
+                  </button>
+                );
+              })
+            )}
+          </>
         )}
       </div>
+
+      {/* গ্রুপ তৈরি মোডাল */}
+      {showGroupModal && (
+        <CreateGroupModal
+          friends={friends}
+          onClose={() => setShowGroupModal(false)}
+          onCreated={() => {
+            loadGroups();
+          }}
+        />
+      )}
     </div>
   );
 };
