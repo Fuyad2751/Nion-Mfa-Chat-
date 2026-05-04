@@ -28,6 +28,12 @@ const initializeSocket = (io) => {
     // ✅ ব্যক্তিগত রুমে জয়েন করো (নিজের আইডির রুম)
     socket.join(user._id.toString());
 
+        // ✅ মেসেজে রিয়েক্ট
+    socket.on('reactMessage', ({ messageId, receiverId, reaction }) => {
+      io.to(receiverId).emit('messageReaction', { messageId, reaction });
+      socket.emit('messageReaction', { messageId, reaction });
+    });
+
     // ============ পার্সোনাল চ্যাট ============
 
     // ✅ মেসেজ পাঠানো ইভেন্ট

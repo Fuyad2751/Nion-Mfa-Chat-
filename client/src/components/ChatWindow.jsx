@@ -5,6 +5,21 @@ import { useSocket } from '../context/SocketContext';
 import toast from 'react-hot-toast';
 import EmojiPicker from 'emoji-picker-react';
 
+// ✅ নোটিফিকেশন ফাংশন
+const showNotification = (message) => {
+  if (!('Notification' in window)) return;
+  
+  if (Notification.permission === 'granted') {
+    new Notification('Mfa Chat - নতুন মেসেজ', {
+      body: `${message.sender?.name || 'কেউ'}: ${message.content}`,
+      icon: '/favicon.svg',
+      tag: message._id,
+    });
+  } else if (Notification.permission !== 'denied') {
+    Notification.requestPermission();
+  }
+};
+
 const ChatWindow = ({ selectedFriend, onBack, onShowProfile }) => {
   const { user } = useAuth();
   const { socket, onlineUsers } = useSocket();
@@ -31,9 +46,16 @@ const ChatWindow = ({ selectedFriend, onBack, onShowProfile }) => {
     if (!socket || !selectedFriend) return;
 
     const handleReceiveMessage = (msg) => {
-      if (msg.sender._id === selectedFriend._id || msg.sender === selectedFriend._id || 
-          msg.sender._id === user?._id || msg.sender === user?._id) {
+      const isMyMessage = msg.sender._id === user?._id || msg.sender === user?._id;
+      const isFromSelectedFriend = msg.sender._id === selectedFriend._id || msg.sender === selectedFriend._id;
+      
+      if (isMyMessage || isFromSelectedFriend) {
         setMessages((prev) => [...prev, msg]);
+      }
+
+      // ✅ নোটিফিকেশন (অন্য কেউ মেসেজ দিলে, চ্যাট খোলা না থাকলে)
+      if (!isMyMessage) {
+        showNotification(msg);
       }
     };
 
@@ -132,16 +154,9 @@ const ChatWindow = ({ selectedFriend, onBack, onShowProfile }) => {
     <div className="flex flex-col h-full w-full relative">
       {/* হেডার */}
       <div className="flex items-center gap-3 p-3 border-b border-[#00F0FF]/10 bg-[#0F0F15]">
-              <button
-          onClick={onShowProfile}
-          className="md:hidden text-gray-400 hover:text-[#00F0FF] text-lg px-2"
-          title="প্রোফাইল"
-        >
-          ℹ️
-        </button>
-        <button onClick={onBack} className="md:hidden text-gray-400 hover:text-white text-xl">←</button>
-        <div className="flex items-center gap-3 flex-1">
-          <div className="relative">
+        <button onClick={onBack} className="md:hidden text-gray-400 hover:text-white text-xl flex-shrink-0">←</button>
+        <div className="flex items-center gap-3 flex-1 min-w-0">
+          <div className="relative flex-shrink-0">
             <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#00F0FF]/40 to-[#FF007F]/40 flex items-center justify-center text-white font-bold text-sm">
               {selectedFriend.name?.charAt(0)}
             </div>
@@ -150,13 +165,20 @@ const ChatWindow = ({ selectedFriend, onBack, onShowProfile }) => {
                 style={{ boxShadow: '0 0 6px #4ade80, 0 0 12px #4ade80' }}></span>
             )}
           </div>
-          <div>
-            <p className="text-gray-200 text-sm font-medium">{selectedFriend.name}</p>
+          <div className="min-w-0">
+            <p className="text-gray-200 text-sm font-medium truncate">{selectedFriend.name}</p>
             <p className={`text-xs ${isOnline ? 'text-green-400' : 'text-gray-500'}`}>
               {typing ? 'টাইপ করছে...' : isOnline ? 'অনলাইন' : 'অফলাইন'}
             </p>
           </div>
         </div>
+        <button
+          onClick={onShowProfile}
+          className="md:hidden text-gray-400 hover:text-[#00F0FF] text-lg px-2 flex-shrink-0"
+          title="প্রোফাইল"
+        >
+          ℹ️
+        </button>
       </div>
 
       {/* মেসেজ */}
@@ -173,7 +195,6 @@ const ChatWindow = ({ selectedFriend, onBack, onShowProfile }) => {
                     {new Date(msg.createdAt).toLocaleTimeString('bn-BD', { hour: '2-digit', minute: '2-digit' })}
                   </p>
                 </div>
-                {/* রিয়েক্ট বাটন */}
                 <button
                   onClick={() => handleReaction(msg._id)}
                   className="absolute -bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity
@@ -198,27 +219,51 @@ const ChatWindow = ({ selectedFriend, onBack, onShowProfile }) => {
         </div>
       )}
 
-      {/* ইনপুট */}
-      <form onSubmit={handleSend} className="p-2 bg-[#0F0F15] border-t border-[#00F0FF]/10 flex gap-2 items-center">
-        <button
-          type="button"
-          onClick={() => setShowEmoji(!showEmoji)}
-          className="px-3 py-3 text-xl hover:bg-[#1A1A20] rounded-xl transition-colors"
-        >
-          😊
-        </button>
-        <input
-          ref={inputRef}
-          type="text"
-          placeholder="মেসেজ লিখো..."
-          value={newMessage}
-          onChange={(e) => { setNewMessage(e.target.value); handleTyping(); }}
-          className="flex-1 px-4 py-3 bg-[#1A1A20] text-white placeholder-gray-400 text-sm rounded-xl border border-[#00F0FF]/20 outline-none focus:border-[#00F0FF]"
-          style={{ fontSize: '16px' }}
-        />
-        <button type="submit" disabled={!newMessage.trim()} className="px-4 py-3 bg-[#00F0FF] text-black font-bold text-sm rounded-xl disabled:opacity-40">
-          পাঠাও
-        </button>
+      {/* ✅ মেসেজ ইনপুট - মোবাইল ফিক্স */}
+      <form 
+        onSubmit={handleSend} 
+        className="flex-shrink-0 w-full p-2 border-t border-[#00F0FF]/20 bg-[#0F0F15]"
+        style={{ paddingBottom: 'max(8px, env(safe-area-inset-bottom))' }}
+      >
+        <div className="flex gap-2 items-center w-full max-w-full">
+          {/* ইমোজি বাটন */}
+          <button
+            type="button"
+            onClick={() => setShowEmoji(!showEmoji)}
+            className="flex-shrink-0 px-2 py-3 text-xl hover:bg-[#1A1A20] rounded-xl transition-colors"
+          >
+            😊
+          </button>
+          
+          {/* ইনপুট */}
+          <input
+            ref={inputRef}
+            type="text"
+            inputMode="text"
+            enterKeyHint="send"
+            placeholder="মেসেজ লিখো..."
+            value={newMessage}
+            onChange={(e) => { setNewMessage(e.target.value); handleTyping(); }}
+            autoComplete="off"
+            className="flex-1 min-w-0 px-3 py-3 bg-[#1A1A20] border-2 border-[#00F0FF]/40 rounded-xl
+                       text-white placeholder-gray-400 outline-none text-base
+                       focus:border-[#00F0FF] focus:shadow-[0_0_15px_#00F0FF]
+                       transition-all duration-300"
+            style={{ fontSize: '16px' }}
+          />
+          
+          {/* পাঠাও বাটন */}
+          <button
+            type="submit"
+            disabled={!newMessage.trim()}
+            className="flex-shrink-0 px-4 py-3 bg-gradient-to-r from-[#00F0FF] to-[#00F0FF]/80 rounded-xl
+                       text-black font-bold text-sm hover:shadow-[0_0_15px_#00F0FF]
+                       transition-all duration-300 disabled:opacity-30 active:scale-95
+                       touch-manipulation select-none whitespace-nowrap"
+          >
+            পাঠাও
+          </button>
+        </div>
       </form>
     </div>
   );

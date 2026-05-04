@@ -38,8 +38,16 @@ const PendingRequests = ({ onUpdate }) => {
     }
   };
 
-  useEffect(() => {
-    loadRequests();
+   useEffect(() => {
+    loadFriends();
+    loadGroups();
+    
+    // ✅ প্রতি ৫ সেকেন্ডে রিফ্রেশ (ফ্রেন্ড লিস্ট হারিয়ে গেলে ফিরে পেতে)
+    const interval = setInterval(() => {
+      loadFriends();
+    }, 5000);
+    
+    return () => clearInterval(interval);
   }, []);
 
   if (requests.length === 0 && !show) return null;

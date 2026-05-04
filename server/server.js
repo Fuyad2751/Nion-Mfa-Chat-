@@ -10,6 +10,7 @@ const authRoutes = require('./routes/authRoutes');
 const friendRoutes = require('./routes/friendRoutes');
 const messageRoutes = require('./routes/messageRoutes');
 const groupRoutes = require('./routes/groupRoutes');
+const adminRoutes = require('./routes/adminRoutes');
 
 // এনভায়রনমেন্ট ভেরিয়েবল লোড
 dotenv.config();
@@ -36,6 +37,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/friends', friendRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/groups', groupRoutes);
+app.use('/api/admin', adminRoutes);
 
 // HTTP সার্ভার তৈরি
 const server = http.createServer(app);
