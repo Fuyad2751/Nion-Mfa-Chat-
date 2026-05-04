@@ -132,6 +132,13 @@ const ChatWindow = ({ selectedFriend, onBack, onShowProfile }) => {
     <div className="flex flex-col h-full w-full relative">
       {/* হেডার */}
       <div className="flex items-center gap-3 p-3 border-b border-[#00F0FF]/10 bg-[#0F0F15]">
+              <button
+          onClick={onShowProfile}
+          className="md:hidden text-gray-400 hover:text-[#00F0FF] text-lg px-2"
+          title="প্রোফাইল"
+        >
+          ℹ️
+        </button>
         <button onClick={onBack} className="md:hidden text-gray-400 hover:text-white text-xl">←</button>
         <div className="flex items-center gap-3 flex-1">
           <div className="relative">
