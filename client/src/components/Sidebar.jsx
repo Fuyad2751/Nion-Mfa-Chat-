@@ -191,7 +191,7 @@ const Sidebar = ({ user, onlineUsers, selectedFriend, selectedGroup, onSelectFri
   const [searchResults, setSearchResults] = useState([]);
   const [showSearch, setShowSearch] = useState(false);
   const [showGroupModal, setShowGroupModal] = useState(false);
-  const [activeTab, setActiveTab] = useState('friends'); // 'friends' or 'groups'
+  const [activeTab, setActiveTab] = useState('friends');
 
   const loadFriends = async () => {
     try {
@@ -237,6 +237,19 @@ const Sidebar = ({ user, onlineUsers, selectedFriend, selectedGroup, onSelectFri
       setSearchResults(prev => prev.filter(u => u._id !== userId));
     } catch (error) {
       toast.error(error.response?.data?.message || 'ব্যর্থ');
+    }
+  };
+
+  // ✅ ফ্রেন্ড ডিলিট ফাংশন
+  const handleDeleteFriend = async (friendId, friendName) => {
+    if (!window.confirm(`তুমি কি নিশ্চিত ${friendName} কে বন্ধু তালিকা থেকে সরাতে চাও?`)) return;
+    try {
+      await API.delete(`/friends/remove/${friendId}`);
+      toast.success(`${friendName} কে বন্ধু তালিকা থেকে সরানো হয়েছে`);
+      loadFriends();
+      loadGroups();
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'ডিলিট ব্যর্থ');
     }
   };
 
@@ -306,7 +319,7 @@ const Sidebar = ({ user, onlineUsers, selectedFriend, selectedGroup, onSelectFri
               : 'text-gray-500 hover:text-gray-300'
             }`}
         >
-          👥 বন্ধুরা
+          👤 বন্ধুরা
         </button>
         <button
           onClick={() => setActiveTab('groups')}
@@ -366,7 +379,7 @@ const Sidebar = ({ user, onlineUsers, selectedFriend, selectedGroup, onSelectFri
         </div>
       )}
 
-      {/* পেন্ডিং রিকোয়েস্ট (শুধু ফ্রেন্ড ট্যাবে) */}
+      {/* পেন্ডিং রিকোয়েস্ট */}
       {activeTab === 'friends' && (
         <PendingRequests
           onUpdate={() => {
@@ -379,7 +392,7 @@ const Sidebar = ({ user, onlineUsers, selectedFriend, selectedGroup, onSelectFri
       <div className="flex-1 overflow-y-auto p-2">
         {activeTab === 'friends' ? (
           <>
-            <p className="text-gray-500 text-xs uppercase tracking-wider px-3 py-2">বন্ধুরা</p>
+            <p className="text-gray-500 text-xs uppercase tracking-wider px-3 py-2">বন্ধুরা ({friends.length})</p>
             {friends.length === 0 ? (
               <p className="text-gray-600 text-sm text-center py-8">এখনো কোনো বন্ধু নেই</p>
             ) : (
@@ -387,38 +400,57 @@ const Sidebar = ({ user, onlineUsers, selectedFriend, selectedGroup, onSelectFri
                 const isOnline = onlineUsers.includes(friend._id);
                 const isSelected = selectedFriend?._id === friend._id;
                 return (
-                  <button
+                  <div
                     key={friend._id}
-                    onClick={() => { onSelectFriend(friend); }}
-                    className={`w-full flex items-center gap-3 p-3 rounded-xl mb-1 transition-all duration-200
+                    className={`w-full flex items-center gap-2 p-2.5 rounded-xl mb-1 transition-all duration-200 group
                       ${isSelected
                         ? 'bg-[#00F0FF]/10 border border-[#00F0FF]/30'
                         : 'hover:bg-[#1A1A20] border border-transparent'
                       }`}
                   >
-                    <div className="relative">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#00F0FF]/40 to-[#FF007F]/40 
-                                      flex items-center justify-center text-white font-bold text-sm overflow-hidden">
-                        {friend.avatar ? (
-                          <img src={friend.avatar} alt="" className="w-full h-full object-cover" />
-                        ) : (
-                          friend.name?.charAt(0)
+                    {/* ফ্রেন্ড সিলেক্ট বাটন */}
+                    <button
+                      onClick={() => onSelectFriend(friend)}
+                      className="flex items-center gap-3 flex-1 min-w-0"
+                    >
+                      <div className="relative flex-shrink-0">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#00F0FF]/40 to-[#FF007F]/40 
+                                        flex items-center justify-center text-white font-bold text-sm overflow-hidden">
+                          {friend.avatar ? (
+                            <img src={friend.avatar} alt="" className="w-full h-full object-cover" />
+                          ) : (
+                            friend.name?.charAt(0)
+                          )}
+                        </div>
+                        {isOnline && (
+                          <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-400 rounded-full 
+                                           border-2 border-[#0F0F15]"
+                            style={{ boxShadow: '0 0 6px #4ade80, 0 0 12px #4ade80' }}
+                          ></span>
                         )}
                       </div>
-                      {isOnline && (
-                        <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-400 rounded-full 
-                                         border-2 border-[#0F0F15]"
-                          style={{ boxShadow: '0 0 6px #4ade80, 0 0 12px #4ade80' }}
-                        ></span>
-                      )}
-                    </div>
-                    <div className="flex-1 text-left min-w-0">
-                      <p className="text-gray-200 text-sm font-medium truncate">{friend.name}</p>
-                      <p className={`text-xs ${isOnline ? 'text-green-400' : 'text-gray-500'}`}>
-                        {isOnline ? 'অনলাইন' : 'অফলাইন'}
-                      </p>
-                    </div>
-                  </button>
+                      <div className="flex-1 text-left min-w-0">
+                        <p className="text-gray-200 text-sm font-medium truncate">{friend.name}</p>
+                        <p className={`text-xs ${isOnline ? 'text-green-400' : 'text-gray-500'}`}>
+                          {isOnline ? 'অনলাইন' : 'অফলাইন'}
+                        </p>
+                      </div>
+                    </button>
+
+                    {/* 🗑️ ডিলিট বাটন */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteFriend(friend._id, friend.name);
+                      }}
+                      className="opacity-0 group-hover:opacity-100 md:opacity-0 opacity-100
+                                 text-red-400 hover:text-red-300 hover:bg-red-500/10 
+                                 p-1.5 rounded-lg transition-all text-sm flex-shrink-0"
+                      title="বন্ধু ডিলিট করো"
+                    >
+                      🗑️
+                    </button>
+                  </div>
                 );
               })
             )}
