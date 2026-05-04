@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const API = axios.create({
-  baseURL: 'http://localhost:4000/api',
+  baseURL: 'https://mfa-chat-backend.onrender.com/api',  // ✅ লাইভ URL
 });
 
 // রিকোয়েস্ট ইন্টারসেপ্টর (টোকেন অটো বসাবে)
