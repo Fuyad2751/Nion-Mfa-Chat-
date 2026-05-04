@@ -33,7 +33,7 @@ const ChatPage = () => {
   };
 
   return (
-    <div className="h-screen bg-[#0B0B0F] flex overflow-hidden">
+    <div className="h-dvh bg-[#0B0B0F] flex overflow-hidden fixed inset-0">
       {/* সাইডবার */}
       <div className={`
         ${showSidebar ? 'translate-x-0' : '-translate-x-full'}

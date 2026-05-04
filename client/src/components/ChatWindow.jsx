@@ -39,7 +39,6 @@ const ChatWindow = ({ selectedFriend, onBack, onShowProfile }) => {
     if (!socket || !selectedFriend) return;
 
     const handleReceiveMessage = (message) => {
-      // চেক করো মেসেজটা এই চ্যাটের কিনা
       if (message.sender._id === selectedFriend._id || message.sender._id === user?._id) {
         setMessages((prev) => [...prev, message]);
       }
@@ -76,12 +75,10 @@ const ChatWindow = ({ selectedFriend, onBack, onShowProfile }) => {
     if (!newMessage.trim()) return;
 
     try {
-      // REST API দিয়ে পাঠাও
       await API.post('/messages', {
         receiverId: selectedFriend._id,
         content: newMessage.trim(),
       });
-      // Socket দিয়েও পাঠাও
       socket?.emit('sendMessage', {
         receiverId: selectedFriend._id,
         content: newMessage.trim(),
@@ -109,12 +106,12 @@ const ChatWindow = ({ selectedFriend, onBack, onShowProfile }) => {
   if (!selectedFriend) {
     return (
       <div className="flex-1 flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-5xl font-bold text-[#00F0FF] mb-3"
+        <div className="text-center px-4">
+          <h2 className="text-3xl md:text-5xl font-bold text-[#00F0FF] mb-3"
             style={{ textShadow: '0 0 15px #00F0FF, 0 0 40px #00F0FF' }}>
             Mfa Chat
           </h2>
-          <p className="text-gray-500">বন্ধু সিলেক্ট করো চ্যাট শুরু করতে</p>
+          <p className="text-gray-500 text-sm md:text-base">বন্ধু সিলেক্ট করো চ্যাট শুরু করতে</p>
         </div>
       </div>
     );
@@ -123,17 +120,17 @@ const ChatWindow = ({ selectedFriend, onBack, onShowProfile }) => {
   return (
     <div className="flex-1 flex flex-col h-full">
       {/* চ্যাট হেডার */}
-      <div className="flex items-center gap-3 p-3 border-b border-[#00F0FF]/10 bg-[#0F0F15]">
+      <div className="flex-shrink-0 flex items-center gap-3 p-3 border-b border-[#00F0FF]/10 bg-[#0F0F15]">
         {/* মোবাইল ব্যাক বাটন */}
-        <button onClick={onBack} className="md:hidden text-gray-400 hover:text-white text-xl">
+        <button onClick={onBack} className="md:hidden text-gray-400 hover:text-white text-xl px-1">
           ←
         </button>
 
         <button
           onClick={onShowProfile}
-          className="flex items-center gap-3 flex-1 md:cursor-pointer cursor-default"
+          className="flex items-center gap-3 flex-1 min-w-0"
         >
-          <div className="relative">
+          <div className="relative flex-shrink-0">
             <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-[#00F0FF]/40 to-[#FF007F]/40 
                             flex items-center justify-center text-white font-bold text-xs md:text-sm">
               {selectedFriend.name?.charAt(0)}
@@ -145,8 +142,8 @@ const ChatWindow = ({ selectedFriend, onBack, onShowProfile }) => {
               ></span>
             )}
           </div>
-          <div>
-            <p className="text-gray-200 text-sm md:text-base font-medium">{selectedFriend.name}</p>
+          <div className="min-w-0">
+            <p className="text-gray-200 text-sm md:text-base font-medium truncate">{selectedFriend.name}</p>
             <p className={`text-xs ${isOnline ? 'text-green-400' : 'text-gray-500'}`}>
               {typing ? 'টাইপ করছে...' : isOnline ? 'অনলাইন' : 'অফলাইন'}
             </p>
@@ -156,12 +153,15 @@ const ChatWindow = ({ selectedFriend, onBack, onShowProfile }) => {
 
       {/* মেসেজ লিস্ট */}
       <div className="flex-1 overflow-y-auto p-3 md:p-4 space-y-2">
+        {messages.length === 0 && (
+          <p className="text-center text-gray-600 text-sm mt-10">কোনো মেসেজ নেই। মেসেজ পাঠানো শুরু করো!</p>
+        )}
         {messages.map((msg, index) => {
           const isMine = msg.sender?._id === user?._id || msg.sender === user?._id;
           return (
             <div key={msg._id || index} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
               <div className={`
-                max-w-[80%] md:max-w-md px-4 py-2.5 rounded-2xl text-sm md:text-base
+                max-w-[85%] md:max-w-md px-4 py-2.5 rounded-2xl text-sm md:text-base
                 ${isMine
                   ? 'bg-gradient-to-r from-[#00F0FF]/20 to-[#00F0FF]/10 border border-[#00F0FF]/30 rounded-br-md'
                   : 'bg-[#1A1A20] border border-[#FF007F]/20 rounded-bl-md'
@@ -172,7 +172,7 @@ const ChatWindow = ({ selectedFriend, onBack, onShowProfile }) => {
                   : { boxShadow: '0 0 8px rgba(255,0,127,0.1)' }
                 }
               >
-                <p className="text-gray-200">{msg.content}</p>
+                <p className="text-gray-200 break-words">{msg.content}</p>
                 <p className={`text-[10px] mt-1 ${isMine ? 'text-[#00F0FF]/60 text-right' : 'text-gray-600 text-left'}`}>
                   {new Date(msg.createdAt).toLocaleTimeString('bn-BD', { hour: '2-digit', minute: '2-digit' })}
                 </p>
@@ -195,29 +195,37 @@ const ChatWindow = ({ selectedFriend, onBack, onShowProfile }) => {
       </div>
 
       {/* মেসেজ ইনপুট */}
-      <form onSubmit={handleSend} className="p-3 border-t border-[#00F0FF]/10 bg-[#0F0F15]">
-        <div className="flex gap-2">
+      <form 
+        onSubmit={handleSend} 
+        className="flex-shrink-0 p-2 md:p-3 border-t border-[#00F0FF]/20 bg-[#0F0F15]"
+      >
+        <div className="flex gap-2 items-center">
           <input
             type="text"
+            inputMode="text"
+            enterKeyHint="send"
             placeholder="মেসেজ লিখো..."
             value={newMessage}
             onChange={(e) => {
               setNewMessage(e.target.value);
               handleTyping();
             }}
-            className="flex-1 px-4 py-3 bg-[#1A1A20] border border-[#00F0FF]/20 rounded-xl
-                       text-gray-200 placeholder-gray-500 outline-none text-sm
-                       focus:border-[#00F0FF] focus:shadow-[0_0_12px_#00F0FF]
+            autoComplete="off"
+            className="flex-1 px-4 py-3.5 bg-[#1A1A20] border-2 border-[#00F0FF]/40 rounded-xl
+                       text-white placeholder-gray-400 outline-none text-base
+                       focus:border-[#00F0FF] focus:shadow-[0_0_15px_#00F0FF]
                        transition-all duration-300"
+            style={{ fontSize: '16px' }}
           />
           <button
             type="submit"
             disabled={!newMessage.trim()}
-            className="px-4 py-3 bg-gradient-to-r from-[#00F0FF] to-[#00F0FF]/80 rounded-xl
+            className="flex-shrink-0 px-5 py-3.5 bg-gradient-to-r from-[#00F0FF] to-[#00F0FF]/80 rounded-xl
                        text-black font-bold text-sm hover:shadow-[0_0_15px_#00F0FF]
-                       transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed"
+                       transition-all duration-300 disabled:opacity-30 active:scale-95
+                       touch-manipulation select-none"
           >
-            📨
+            পাঠাও
           </button>
         </div>
       </form>
