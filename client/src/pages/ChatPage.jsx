@@ -33,7 +33,7 @@ const ChatPage = () => {
   };
 
   return (
-    <div className="h-dvh bg-[#0B0B0F] flex overflow-hidden fixed inset-0">
+    <div className="h-screen bg-[#0B0B0F] flex overflow-hidden relative">
       {/* সাইডবার */}
       <div className={`
         ${showSidebar ? 'translate-x-0' : '-translate-x-full'}
@@ -58,17 +58,19 @@ const ChatPage = () => {
       )}
 
       {/* চ্যাট উইন্ডো */}
-      <div className={`flex-1 flex flex-col ${showSidebar ? 'hidden md:flex' : 'flex'}`}>
-        {selectedGroup ? (
-          <GroupChat group={selectedGroup} onBack={handleBack} />
-        ) : (
-          <ChatWindow
-            selectedFriend={selectedFriend}
-            onBack={handleBack}
-            onShowProfile={() => setShowProfile(true)}
-          />
-        )}
-      </div>
+      {!showSidebar || (window.innerWidth >= 768) ? (
+        <div className="flex-1 flex flex-col h-full">
+          {selectedGroup ? (
+            <GroupChat group={selectedGroup} onBack={handleBack} />
+          ) : (
+            <ChatWindow
+              selectedFriend={selectedFriend}
+              onBack={handleBack}
+              onShowProfile={() => setShowProfile(true)}
+            />
+          )}
+        </div>
+      ) : null}
 
       {/* ফ্রেন্ড প্রোফাইল (ডেস্কটপ) */}
       {showProfile && selectedFriend && (
@@ -83,7 +85,7 @@ const ChatPage = () => {
 
       {/* নিজের প্রোফাইল পেজ */}
       {showProfilePage && (
-        <div className="fixed inset-0 z-50 bg-[#0B0B0F]">
+        <div className="fixed inset-0 z-50 bg-[#0B0B0F] overflow-y-auto">
           <ProfilePage onBack={() => setShowProfilePage(false)} />
         </div>
       )}
