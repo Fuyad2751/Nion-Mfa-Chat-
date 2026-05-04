@@ -3,6 +3,7 @@ import API from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 import toast from 'react-hot-toast';
+import EmojiPicker from 'emoji-picker-react';
 
 const ChatWindow = ({ selectedFriend, onBack, onShowProfile }) => {
   const { user } = useAuth();
@@ -10,6 +11,7 @@ const ChatWindow = ({ selectedFriend, onBack, onShowProfile }) => {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [typing, setTyping] = useState(false);
+  const [showEmoji, setShowEmoji] = useState(false);
   const messagesEndRef = useRef(null);
   const typingTimeoutRef = useRef(null);
   const inputRef = useRef(null);
@@ -18,14 +20,6 @@ const ChatWindow = ({ selectedFriend, onBack, onShowProfile }) => {
 
   useEffect(() => {
     if (!selectedFriend) return;
-    const loadMessages = async () => {
-      try {
-        const { data } = await API.get(`/messages/${selectedFriend._id}`);
-        setMessages(data);
-      } catch (error) {
-        console.error(error);
-      }
-    };
     loadMessages();
   }, [selectedFriend]);
 
@@ -36,10 +30,19 @@ const ChatWindow = ({ selectedFriend, onBack, onShowProfile }) => {
   useEffect(() => {
     if (!socket || !selectedFriend) return;
 
-    const handleReceiveMessage = (message) => {
-      if (message.sender._id === selectedFriend._id || message.sender._id === user?._id) {
-        setMessages((prev) => [...prev, message]);
+    const handleReceiveMessage = (msg) => {
+      if (msg.sender._id === selectedFriend._id || msg.sender === selectedFriend._id || 
+          msg.sender._id === user?._id || msg.sender === user?._id) {
+        setMessages((prev) => [...prev, msg]);
       }
+    };
+
+    const handleReaction = (data) => {
+      setMessages((prev) =>
+        prev.map((m) =>
+          m._id === data.messageId ? { ...m, reaction: data.reaction } : m
+        )
+      );
     };
 
     const handleTyping = (data) => {
@@ -51,21 +54,30 @@ const ChatWindow = ({ selectedFriend, onBack, onShowProfile }) => {
     };
 
     const handleStopTyping = (data) => {
-      if (data.userId === selectedFriend._id) {
-        setTyping(false);
-      }
+      if (data.userId === selectedFriend._id) setTyping(false);
     };
 
     socket.on('receiveMessage', handleReceiveMessage);
+    socket.on('messageReaction', handleReaction);
     socket.on('typing', handleTyping);
     socket.on('stopTyping', handleStopTyping);
 
     return () => {
       socket.off('receiveMessage', handleReceiveMessage);
+      socket.off('messageReaction', handleReaction);
       socket.off('typing', handleTyping);
       socket.off('stopTyping', handleStopTyping);
     };
   }, [socket, selectedFriend, user]);
+
+  const loadMessages = async () => {
+    try {
+      const { data } = await API.get(`/messages/${selectedFriend._id}`);
+      setMessages(data);
+    } catch (error) {
+      console.error(error);
+    }
+  };
 
   const handleSend = async (e) => {
     e.preventDefault();
@@ -79,16 +91,18 @@ const ChatWindow = ({ selectedFriend, onBack, onShowProfile }) => {
       socket?.emit('sendMessage', {
         receiverId: selectedFriend._id,
         content: newMessage.trim(),
-      }, (response) => {
-        if (response.error) toast.error(response.error);
       });
       setNewMessage('');
-      socket?.emit('stopTyping', { receiverId: selectedFriend._id });
-      // Keep focus on input after sending
+      setShowEmoji(false);
       inputRef.current?.focus();
     } catch (error) {
       toast.error('মেসেজ পাঠানো যায়নি');
     }
+  };
+
+  const handleEmojiSelect = (emoji) => {
+    setNewMessage((prev) => prev + emoji.emoji);
+    inputRef.current?.focus();
   };
 
   const handleTyping = () => {
@@ -97,6 +111,10 @@ const ChatWindow = ({ selectedFriend, onBack, onShowProfile }) => {
     typingTimeoutRef.current = setTimeout(() => {
       socket?.emit('stopTyping', { receiverId: selectedFriend._id });
     }, 2000);
+  };
+
+  const handleReaction = (messageId) => {
+    socket?.emit('reactMessage', { messageId, receiverId: selectedFriend._id, reaction: '❤️' });
   };
 
   if (!selectedFriend) {
@@ -111,7 +129,7 @@ const ChatWindow = ({ selectedFriend, onBack, onShowProfile }) => {
   }
 
   return (
-    <div className="flex flex-col h-full w-full">
+    <div className="flex flex-col h-full w-full relative">
       {/* হেডার */}
       <div className="flex items-center gap-3 p-3 border-b border-[#00F0FF]/10 bg-[#0F0F15]">
         <button onClick={onBack} className="md:hidden text-gray-400 hover:text-white text-xl">←</button>
@@ -135,41 +153,56 @@ const ChatWindow = ({ selectedFriend, onBack, onShowProfile }) => {
       </div>
 
       {/* মেসেজ */}
-      <div className="flex-1 overflow-y-auto p-3 space-y-2 bg-[#0B0B0F]">
+      <div className="flex-1 overflow-y-auto p-3 space-y-3 bg-[#0B0B0F]">
         {messages.map((msg, i) => {
           const isMine = msg.sender?._id === user?._id || msg.sender === user?._id;
           return (
             <div key={msg._id || i} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-[80%] px-3 py-2 rounded-2xl text-sm
-                ${isMine ? 'bg-gradient-to-r from-[#00F0FF]/20 to-[#00F0FF]/10 border border-[#00F0FF]/30' : 'bg-[#1A1A20] border border-[#FF007F]/20'}`}>
-                <p className="text-gray-200">{msg.content}</p>
-                <p className="text-[10px] mt-1 text-gray-500">
-                  {new Date(msg.createdAt).toLocaleTimeString('bn-BD', { hour: '2-digit', minute: '2-digit' })}
-                </p>
+              <div className="relative group">
+                <div className={`max-w-[80%] px-3 py-2 rounded-2xl text-sm
+                  ${isMine ? 'bg-gradient-to-r from-[#00F0FF]/20 to-[#00F0FF]/10 border border-[#00F0FF]/30' : 'bg-[#1A1A20] border border-[#FF007F]/20'}`}>
+                  <p className="text-gray-200">{msg.content}</p>
+                  <p className="text-[10px] mt-1 text-gray-500">
+                    {new Date(msg.createdAt).toLocaleTimeString('bn-BD', { hour: '2-digit', minute: '2-digit' })}
+                  </p>
+                </div>
+                {/* রিয়েক্ট বাটন */}
+                <button
+                  onClick={() => handleReaction(msg._id)}
+                  className="absolute -bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity
+                             bg-[#1A1A20] rounded-full px-2 py-0.5 text-xs border border-[#FF007F]/30 text-[#FF007F]"
+                >
+                  {msg.reaction || '❤️'}
+                </button>
+                {msg.reaction && (
+                  <span className="absolute -bottom-4 right-0 text-lg">{msg.reaction}</span>
+                )}
               </div>
             </div>
           );
         })}
-        {typing && (
-          <div className="flex justify-start">
-            <div className="bg-[#1A1A20] px-4 py-2 rounded-2xl">
-              <div className="flex gap-1">
-                <span className="w-2 h-2 bg-[#FF007F] rounded-full animate-bounce"></span>
-                <span className="w-2 h-2 bg-[#FF007F] rounded-full animate-bounce" style={{ animationDelay: '0.15s' }}></span>
-                <span className="w-2 h-2 bg-[#FF007F] rounded-full animate-bounce" style={{ animationDelay: '0.3s' }}></span>
-              </div>
-            </div>
-          </div>
-        )}
         <div ref={messagesEndRef} />
       </div>
 
+      {/* ইমোজি পিকার */}
+      {showEmoji && (
+        <div className="absolute bottom-16 left-2 z-50">
+          <EmojiPicker onEmojiClick={handleEmojiSelect} theme="dark" height={350} width={300} />
+        </div>
+      )}
+
       {/* ইনপুট */}
       <form onSubmit={handleSend} className="p-2 bg-[#0F0F15] border-t border-[#00F0FF]/10 flex gap-2 items-center">
+        <button
+          type="button"
+          onClick={() => setShowEmoji(!showEmoji)}
+          className="px-3 py-3 text-xl hover:bg-[#1A1A20] rounded-xl transition-colors"
+        >
+          😊
+        </button>
         <input
           ref={inputRef}
           type="text"
-          autoFocus
           placeholder="মেসেজ লিখো..."
           value={newMessage}
           onChange={(e) => { setNewMessage(e.target.value); handleTyping(); }}
