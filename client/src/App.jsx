@@ -4,7 +4,9 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ChatPage from './pages/ChatPage';
 import GuidePage from './pages/GuidePage';
+import AdminPage from './pages/AdminPage';
 
+<Route path="/admin" element={<AdminPage />} />
 function App() {
   const { user, loading } = useAuth();
 
