@@ -86,7 +86,9 @@ const LoginPage = () => {
             রেজিস্টার করো
           </Link>
         </p>
-        <em>Made by Md Fuyad Akand</em>
+        <em className="text-center text-gray-400 mt-6">
+          Made by Md Fuyad Akand
+          </em>
       </div>
     </div>
   );
