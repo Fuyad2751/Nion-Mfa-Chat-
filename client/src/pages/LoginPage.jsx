@@ -39,7 +39,7 @@ const LoginPage = () => {
           </h1>
           <p className="text-[#FF007F] mt-2 text-lg"
             style={{ textShadow: '0 0 8px #FF007F, 0 0 20px #FF007F' }}>
-            Online Chat
+            নিওন যুগের চ্যাটিং
           </p>
         </div>
 
@@ -48,7 +48,7 @@ const LoginPage = () => {
           <div>
             <input
               type="email"
-              placeholder="Email"
+              placeholder="ইমেইল"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full px-5 py-4 bg-transparent border-2 border-[#00F0FF]/40 rounded-xl 
@@ -60,7 +60,7 @@ const LoginPage = () => {
           <div>
             <input
               type="password"
-              placeholder="Password"
+              placeholder="পাসওয়ার্ড"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full px-5 py-4 bg-transparent border-2 border-[#FF007F]/40 rounded-xl 
@@ -80,12 +80,22 @@ const LoginPage = () => {
           </button>
         </form>
 
+        {/* রেজিস্টার লিংক */}
         <p className="text-center text-gray-400 mt-6">
           অ্যাকাউন্ট নেই?{' '}
           <Link to="/register" className="text-[#00F0FF] hover:text-[#FF007F] transition-colors">
             রেজিস্টার করো
           </Link>
         </p>
+
+        {/* ব্যবহার নির্দেশিকা লিংক */}
+        <p className="text-center text-gray-500 text-xs mt-3">
+          <Link to="/guide" className="text-gray-500 hover:text-[#00F0FF] transition-colors">
+            📖 ব্যবহার নির্দেশিকা দেখো
+          </Link>
+        </p>
+
+        {/* Made by */}
         <p className="text-center text-gray-600 text-xs mt-4">
           Made by <span className="text-[#FF007F] font-medium">Md Fuyad Akand</span>
         </p>
