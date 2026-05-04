@@ -39,7 +39,7 @@ const LoginPage = () => {
           </h1>
           <p className="text-[#FF007F] mt-2 text-lg"
             style={{ textShadow: '0 0 8px #FF007F, 0 0 20px #FF007F' }}>
-            নিওন যুগের চ্যাটিং
+            Online Chat
           </p>
         </div>
 
@@ -48,7 +48,7 @@ const LoginPage = () => {
           <div>
             <input
               type="email"
-              placeholder="ইমেইল"
+              placeholder="Email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full px-5 py-4 bg-transparent border-2 border-[#00F0FF]/40 rounded-xl 
@@ -60,7 +60,7 @@ const LoginPage = () => {
           <div>
             <input
               type="password"
-              placeholder="পাসওয়ার্ড"
+              placeholder="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full px-5 py-4 bg-transparent border-2 border-[#FF007F]/40 rounded-xl 
@@ -86,6 +86,7 @@ const LoginPage = () => {
             রেজিস্টার করো
           </Link>
         </p>
+        <em>Made by Md Fuyad Akand</em>
       </div>
     </div>
   );
