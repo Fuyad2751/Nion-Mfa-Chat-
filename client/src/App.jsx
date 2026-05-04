@@ -6,7 +6,6 @@ import ChatPage from './pages/ChatPage';
 import GuidePage from './pages/GuidePage';
 import AdminPage from './pages/AdminPage';
 
-<Route path="/admin" element={<AdminPage />} />
 function App() {
   const { user, loading } = useAuth();
 
@@ -20,10 +19,18 @@ function App() {
 
   return (
     <Routes>
+      {/* পাবলিক রাউট */}
       <Route path="/guide" element={<GuidePage />} />
+      <Route path="/admin" element={<AdminPage />} />
+      
+      {/* অথ রাউট */}
       <Route path="/login" element={!user ? <LoginPage /> : <Navigate to="/chat" />} />
       <Route path="/register" element={!user ? <RegisterPage /> : <Navigate to="/chat" />} />
+      
+      {/* প্রাইভেট রাউট */}
       <Route path="/chat/*" element={user ? <ChatPage /> : <Navigate to="/login" />} />
+      
+      {/* ফলব্যাক */}
       <Route path="*" element={<Navigate to="/guide" />} />
     </Routes>
   );
