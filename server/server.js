@@ -11,8 +11,9 @@ connectDB();
 
 const app = express();
 
+// সহজ CORS — সব URL-কে অনুমতি
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:5173',
+  origin: '*',
   credentials: true,
 }));
 
