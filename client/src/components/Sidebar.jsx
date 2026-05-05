@@ -38,16 +38,8 @@ const PendingRequests = ({ onUpdate }) => {
     }
   };
 
-   useEffect(() => {
-    loadFriends();
-    loadGroups();
-    
-    // ✅ প্রতি ৫ সেকেন্ডে রিফ্রেশ (ফ্রেন্ড লিস্ট হারিয়ে গেলে ফিরে পেতে)
-    const interval = setInterval(() => {
-      loadFriends();
-    }, 5000);
-    
-    return () => clearInterval(interval);
+  useEffect(() => {
+    loadRequests();
   }, []);
 
   if (requests.length === 0 && !show) return null;
@@ -201,12 +193,13 @@ const Sidebar = ({ user, onlineUsers, selectedFriend, selectedGroup, onSelectFri
   const [showGroupModal, setShowGroupModal] = useState(false);
   const [activeTab, setActiveTab] = useState('friends');
 
+  // ✅ loadFriends ফাংশন
   const loadFriends = async () => {
     try {
       const { data } = await API.get('/friends');
       setFriends(data);
     } catch (error) {
-      console.error(error);
+      console.error('loadFriends error:', error);
     }
   };
 
@@ -248,7 +241,6 @@ const Sidebar = ({ user, onlineUsers, selectedFriend, selectedGroup, onSelectFri
     }
   };
 
-  // ✅ ফ্রেন্ড ডিলিট ফাংশন
   const handleDeleteFriend = async (friendId, friendName) => {
     if (!window.confirm(`তুমি কি নিশ্চিত ${friendName} কে বন্ধু তালিকা থেকে সরাতে চাও?`)) return;
     try {
@@ -263,259 +255,98 @@ const Sidebar = ({ user, onlineUsers, selectedFriend, selectedGroup, onSelectFri
 
   return (
     <div className="h-full bg-[#0F0F15] border-r border-[#00F0FF]/10 flex flex-col">
-      {/* হেডার */}
-      <div className="p-4 border-b border-[#00F0FF]/10">
+      {/* হেডার - WhatsApp স্টাইল */}
+      <div className="p-4 bg-[#075e54] text-white">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-xl font-bold text-[#00F0FF]"
-            style={{ textShadow: '0 0 8px #00F0FF' }}>
-            Mfa Chat
-          </h2>
+          <h2 className="text-xl font-semibold">Mfa Chat</h2>
           <div className="flex gap-2">
-            <button
-              onClick={() => setShowSearch(!showSearch)}
-              className="w-9 h-9 rounded-lg border border-[#00F0FF]/30 text-[#00F0FF] 
-                         hover:bg-[#00F0FF]/10 transition-all flex items-center justify-center text-sm"
-            >
-              🔍
-            </button>
-            <button
-              onClick={onProfile}
-              className="w-9 h-9 rounded-lg border border-[#00F0FF]/30 text-[#00F0FF] 
-                         hover:bg-[#00F0FF]/10 transition-all flex items-center justify-center text-sm"
-              title="প্রোফাইল"
-            >
-              👤
-            </button>
-            <button
-              onClick={onLogout}
-              className="w-9 h-9 rounded-lg border border-[#FF007F]/30 text-[#FF007F] 
-                         hover:bg-[#FF007F]/10 transition-all flex items-center justify-center text-sm"
-              title="লগআউট"
-            >
-              🚪
-            </button>
+            <button onClick={() => setShowSearch(!showSearch)} className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 transition-all flex items-center justify-center text-sm">🔍</button>
+            <button onClick={onProfile} className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 transition-all flex items-center justify-center text-sm">👤</button>
+            <button onClick={onLogout} className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 transition-all flex items-center justify-center text-sm">🚪</button>
           </div>
         </div>
-
-        {/* ইউজার প্রোফাইল */}
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#00F0FF] to-[#FF007F] 
-                          flex items-center justify-center text-white font-bold text-lg overflow-hidden">
-            {user?.avatar ? (
-              <img src={user.avatar} alt="profile" className="w-full h-full object-cover" />
-            ) : (
-              user?.name?.charAt(0)
-            )}
+          <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-white font-bold text-lg">
+            {user?.name?.charAt(0)}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-gray-200 font-medium truncate">{user?.name}</p>
-            <p className="text-xs text-green-400 flex items-center gap-1">
-              <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
-              অনলাইন
-            </p>
+            <p className="text-white font-medium truncate">{user?.name}</p>
+            <p className="text-white/70 text-xs">অনলাইন</p>
           </div>
         </div>
       </div>
 
-      {/* ট্যাব: বন্ধু / গ্রুপ */}
-      <div className="flex border-b border-[#00F0FF]/10">
-        <button
-          onClick={() => setActiveTab('friends')}
-          className={`flex-1 py-2.5 text-sm font-medium transition-all
-            ${activeTab === 'friends'
-              ? 'text-[#00F0FF] border-b-2 border-[#00F0FF]'
-              : 'text-gray-500 hover:text-gray-300'
-            }`}
-        >
-          👤 বন্ধুরা
-        </button>
-        <button
-          onClick={() => setActiveTab('groups')}
-          className={`flex-1 py-2.5 text-sm font-medium transition-all
-            ${activeTab === 'groups'
-              ? 'text-[#FF007F] border-b-2 border-[#FF007F]'
-              : 'text-gray-500 hover:text-gray-300'
-            }`}
-        >
-          👥 গ্রুপ
-        </button>
+      {/* ট্যাব */}
+      <div className="flex bg-[#075e54] text-white/80">
+        <button onClick={() => setActiveTab('friends')} className={`flex-1 py-3 text-sm font-medium border-b-2 transition-all ${activeTab === 'friends' ? 'border-white text-white' : 'border-transparent'}`}>বন্ধুরা</button>
+        <button onClick={() => setActiveTab('groups')} className={`flex-1 py-3 text-sm font-medium border-b-2 transition-all ${activeTab === 'groups' ? 'border-white text-white' : 'border-transparent'}`}>গ্রুপ</button>
       </div>
 
-      {/* সার্চ বার */}
+      {/* সার্চ */}
       {showSearch && (
-        <div className="p-3 border-b border-[#00F0FF]/10">
-          <input
-            type="text"
-            placeholder="ইউজার সার্চ করো..."
-            value={searchQuery}
-            onChange={(e) => handleSearch(e.target.value)}
-            className="w-full px-4 py-2.5 bg-[#1A1A20] border border-[#00F0FF]/20 rounded-lg
-                       text-gray-200 placeholder-gray-500 outline-none text-sm
-                       focus:border-[#00F0FF] focus:shadow-[0_0_10px_#00F0FF]
-                       transition-all duration-300"
-            autoFocus
-          />
+        <div className="p-3 bg-white border-b">
+          <input type="text" placeholder="ইউজার সার্চ করো..." value={searchQuery} onChange={(e) => handleSearch(e.target.value)}
+            className="w-full px-4 py-2 bg-gray-100 rounded-full text-sm outline-none" autoFocus />
           {searchResults.length > 0 && (
             <div className="mt-2 space-y-1 max-h-48 overflow-y-auto">
               {searchResults.map((u) => (
-                <div key={u._id} className="flex items-center justify-between p-2 hover:bg-[#00F0FF]/5 rounded-lg">
+                <div key={u._id} className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-lg">
                   <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#00F0FF]/50 to-[#FF007F]/50 
-                                    flex items-center justify-center text-white text-xs font-bold overflow-hidden">
-                      {u.avatar ? (
-                        <img src={u.avatar} alt="" className="w-full h-full object-cover" />
-                      ) : (
-                        u.name?.charAt(0)
-                      )}
-                    </div>
-                    <span className="text-gray-300 text-sm">{u.name}</span>
+                    <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center text-white text-xs font-bold">{u.name?.charAt(0)}</div>
+                    <span className="text-gray-700 text-sm">{u.name}</span>
                   </div>
-                  <button
-                    onClick={() => sendRequest(u._id)}
-                    className="px-3 py-1 text-xs border border-[#00F0FF]/40 text-[#00F0FF] rounded-lg
-                               hover:bg-[#00F0FF] hover:text-black transition-all"
-                  >
-                    + অ্যাড
-                  </button>
+                  <button onClick={() => sendRequest(u._id)} className="px-3 py-1 text-xs bg-[#075e54] text-white rounded-full">+ অ্যাড</button>
                 </div>
               ))}
             </div>
           )}
-          {searchQuery.length >= 2 && searchResults.length === 0 && (
-            <p className="text-gray-500 text-sm mt-2 text-center">কোনো ইউজার পাওয়া যায়নি</p>
-          )}
         </div>
       )}
 
-      {/* পেন্ডিং রিকোয়েস্ট */}
-      {activeTab === 'friends' && (
-        <PendingRequests
-          onUpdate={() => {
-            loadFriends();
-          }}
-        />
-      )}
+      {/* পেন্ডিং */}
+      {activeTab === 'friends' && <PendingRequests onUpdate={() => { loadFriends(); }} />}
 
-      {/* কন্টেন্ট: ফ্রেন্ড বা গ্রুপ লিস্ট */}
-      <div className="flex-1 overflow-y-auto p-2">
+      {/* লিস্ট */}
+      <div className="flex-1 overflow-y-auto bg-white">
         {activeTab === 'friends' ? (
-          <>
-            <p className="text-gray-500 text-xs uppercase tracking-wider px-3 py-2">বন্ধুরা ({friends.length})</p>
-            {friends.length === 0 ? (
-              <p className="text-gray-600 text-sm text-center py-8">এখনো কোনো বন্ধু নেই</p>
-            ) : (
-              friends.map((friend) => {
-                const isOnline = onlineUsers.includes(friend._id);
-                const isSelected = selectedFriend?._id === friend._id;
-                return (
-                  <div
-                    key={friend._id}
-                    className={`w-full flex items-center gap-2 p-2.5 rounded-xl mb-1 transition-all duration-200 group
-                      ${isSelected
-                        ? 'bg-[#00F0FF]/10 border border-[#00F0FF]/30'
-                        : 'hover:bg-[#1A1A20] border border-transparent'
-                      }`}
-                  >
-                    {/* ফ্রেন্ড সিলেক্ট বাটন */}
-                    <button
-                      onClick={() => onSelectFriend(friend)}
-                      className="flex items-center gap-3 flex-1 min-w-0"
-                    >
-                      <div className="relative flex-shrink-0">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#00F0FF]/40 to-[#FF007F]/40 
-                                        flex items-center justify-center text-white font-bold text-sm overflow-hidden">
-                          {friend.avatar ? (
-                            <img src={friend.avatar} alt="" className="w-full h-full object-cover" />
-                          ) : (
-                            friend.name?.charAt(0)
-                          )}
-                        </div>
-                        {isOnline && (
-                          <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-400 rounded-full 
-                                           border-2 border-[#0F0F15]"
-                            style={{ boxShadow: '0 0 6px #4ade80, 0 0 12px #4ade80' }}
-                          ></span>
-                        )}
-                      </div>
-                      <div className="flex-1 text-left min-w-0">
-                        <p className="text-gray-200 text-sm font-medium truncate">{friend.name}</p>
-                        <p className={`text-xs ${isOnline ? 'text-green-400' : 'text-gray-500'}`}>
-                          {isOnline ? 'অনলাইন' : 'অফলাইন'}
-                        </p>
-                      </div>
-                    </button>
-
-                    {/* 🗑️ ডিলিট বাটন */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteFriend(friend._id, friend.name);
-                      }}
-                      className="opacity-0 group-hover:opacity-100 md:opacity-0 opacity-100
-                                 text-red-400 hover:text-red-300 hover:bg-red-500/10 
-                                 p-1.5 rounded-lg transition-all text-sm flex-shrink-0"
-                      title="বন্ধু ডিলিট করো"
-                    >
-                      🗑️
-                    </button>
+          friends.length === 0 ? (
+            <p className="text-gray-400 text-sm text-center py-8">এখনো কোনো বন্ধু নেই</p>
+          ) : (
+            friends.map((friend) => {
+              const isOnline = onlineUsers.includes(friend._id);
+              const isSelected = selectedFriend?._id === friend._id;
+              return (
+                <div key={friend._id} className={`flex items-center gap-3 px-4 py-3 border-b border-gray-100 hover:bg-gray-50 cursor-pointer ${isSelected ? 'bg-gray-100' : ''}`}
+                  onClick={() => onSelectFriend(friend)}>
+                  <div className="relative flex-shrink-0">
+                    <div className="w-12 h-12 rounded-full bg-gray-300 flex items-center justify-center text-white font-bold">{friend.name?.charAt(0)}</div>
+                    {isOnline && <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></span>}
                   </div>
-                );
-              })
-            )}
-          </>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-gray-900 text-sm font-medium truncate">{friend.name}</p>
+                    <p className={`text-xs ${isOnline ? 'text-green-600' : 'text-gray-400'}`}>{isOnline ? 'অনলাইন' : 'অফলাইন'}</p>
+                  </div>
+                  <button onClick={(e) => { e.stopPropagation(); handleDeleteFriend(friend._id, friend.name); }}
+                    className="text-red-400 hover:text-red-600 p-1">🗑️</button>
+                </div>
+              );
+            })
+          )
         ) : (
-          <>
-            <div className="flex items-center justify-between px-3 py-2">
-              <p className="text-gray-500 text-xs uppercase tracking-wider">গ্রুপ</p>
-              <button
-                onClick={() => setShowGroupModal(true)}
-                className="text-xs text-[#FF007F] border border-[#FF007F]/30 px-2 py-1 rounded-lg
-                           hover:bg-[#FF007F]/10 transition-all"
-              >
-                + নতুন
-              </button>
-            </div>
-            {groups.length === 0 ? (
-              <p className="text-gray-600 text-sm text-center py-8">কোনো গ্রুপ নেই</p>
-            ) : (
-              groups.map((group) => {
-                const isSelected = selectedGroup?._id === group._id;
-                return (
-                  <button
-                    key={group._id}
-                    onClick={() => onSelectGroup?.(group)}
-                    className={`w-full flex items-center gap-3 p-3 rounded-xl mb-1 transition-all duration-200
-                      ${isSelected
-                        ? 'bg-[#FF007F]/10 border border-[#FF007F]/30'
-                        : 'hover:bg-[#1A1A20] border border-transparent'
-                      }`}
-                  >
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#FF007F]/40 to-[#FF007F]/20 
-                                    flex items-center justify-center text-white font-bold text-sm">
-                      👥
-                    </div>
-                    <div className="flex-1 text-left min-w-0">
-                      <p className="text-gray-200 text-sm font-medium truncate">{group.name}</p>
-                      <p className="text-xs text-gray-500">{group.members?.length || 0} জন মেম্বার</p>
-                    </div>
-                  </button>
-                );
-              })
-            )}
-          </>
+          <div className="p-4">
+            <button onClick={() => setShowGroupModal(true)} className="w-full py-3 bg-[#075e54] text-white rounded-full text-sm font-medium">+ নতুন গ্রুপ</button>
+            {groups.length === 0 ? <p className="text-gray-400 text-sm text-center py-4">কোনো গ্রুপ নেই</p> : groups.map((group) => (
+              <div key={group._id} onClick={() => onSelectGroup?.(group)} className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 hover:bg-gray-50 cursor-pointer mt-2">
+                <div className="w-12 h-12 rounded-full bg-gray-300 flex items-center justify-center text-white font-bold">👥</div>
+                <div><p className="text-gray-900 text-sm font-medium">{group.name}</p><p className="text-xs text-gray-400">{group.members?.length || 0} জন</p></div>
+              </div>
+            ))}
+          </div>
         )}
       </div>
 
-      {/* গ্রুপ তৈরি মোডাল */}
-      {showGroupModal && (
-        <CreateGroupModal
-          friends={friends}
-          onClose={() => setShowGroupModal(false)}
-          onCreated={() => {
-            loadGroups();
-          }}
-        />
-      )}
+      {/* গ্রুপ মোডাল */}
+      {showGroupModal && <CreateGroupModal friends={friends} onClose={() => setShowGroupModal(false)} onCreated={() => { loadGroups(); }} />}
     </div>
   );
 };
